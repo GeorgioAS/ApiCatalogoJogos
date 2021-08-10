@@ -1,4 +1,5 @@
-﻿using ApiCatalogoJogos.InputModel;
+﻿using ApiCatalogoJogos.Exceptions;
+using ApiCatalogoJogos.InputModel;
 using ApiCatalogoJogos.Services;
 using ApiCatalogoJogos.ViewModel;
 using Microsoft.AspNetCore.Http;
@@ -24,40 +25,79 @@ namespace ApiCatalogoJogos.Controllers.v1
         [HttpGet]
         public async Task<ActionResult<IEnumerable<JogoViewModel>>> Obter([FromQuery, Range(1, int.MaxValue)] int pagina = 1, [FromQuery, Range(1,50)] int quantidade = 5)
         {
-            var result = await _jogoservice.Obter(pagina , quantidade );
-            if (result.Count() == 0)
+            var jogo = await _jogoservice.Obter(pagina , quantidade );
+
+            if (jogo.Count() == 0)
                 return NoContent();
-            return Ok(result);
+
+            return Ok(jogo);
         }
 
         [HttpGet("{idJogo:guid}")]
-        public async Task<ActionResult<JogoViewModel>> Obter(Guid id) 
+        public async Task<ActionResult<JogoViewModel>> Obter(Guid idJogo) 
         {
-            return Ok();
+            var jogo = await _jogoservice.Obter(idJogo);
+
+            if (jogo == null)
+                return NoContent();
+
+            return Ok(jogo);
         }
 
         [HttpPost]
-        public async Task<ActionResult<JogoViewModel>> InserirJogo(JogoInputModel Jogo)
+        public async Task<ActionResult<JogoViewModel>> InserirJogo([FromBody] JogoInputModel jogoInputModel)
         {
-            return Ok();
+            try
+            {
+                var jogo = await _jogoservice.Inserir(jogoInputModel);
+                return Ok(jogo);
+            }
+            catch (JogoCadastradoException ex)
+            {
+                return UnprocessableEntity("Ja existe um jogo com este nome para esta produtora");
+            }
         }
 
         [HttpPut("{idJogo:guid}")]
-        public async Task<ActionResult<object>> AtualizarJogo(Guid idJogo, JogoInputModel Jogo)
+        public async Task<ActionResult<object>> AtualizarJogo([FromRoute] Guid idJogo, [FromBody] JogoInputModel jogoInputModel)
         {
-            return Ok();
+            try
+            {
+                await _jogoservice.Atualizar(idJogo, jogoInputModel);
+                return Ok();
+            }
+            catch (JogoNaoCadastradoException ex)
+            {
+                return NotFound("Não existe este jogo");
+            }
         }
 
         [HttpPatch("{idJogo:guid}/preco/{preco:double}")]
-        public async Task<ActionResult> AtualizarJogo(Guid idJogo, double preco)
+        public async Task<ActionResult> AtualizarJogo([FromRoute] Guid idJogo, [FromRoute] double preco)
         {
-            return Ok();
+            try
+            {
+                await _jogoservice.Atualizar(idJogo, preco);
+                return Ok();
+            }
+            catch (JogoNaoCadastradoException ex)            
+            {
+                return NotFound("Não existe este jogo");
+            }
         }
 
         [HttpDelete("{idJogo:guid}")]
-        public async Task<ActionResult> ApaparJogo(Guid idJogo)
+        public async Task<ActionResult> ApaparJogo([FromRoute]  Guid idJogo)
         {
-            return Ok();
+            try
+            {
+                await _jogoservice.Remover(idJogo);
+                return Ok();
+            }
+            catch (JogoNaoCadastradoException ex)
+            {
+                return NotFound("Não existe este jogo");
+            }
         }
 
     }
